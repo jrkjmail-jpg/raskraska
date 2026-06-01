@@ -1,1 +1,2 @@
--r apps/api/requirements.txt
+aiogram==3.17.0
+pydantic-settings==2.7.1

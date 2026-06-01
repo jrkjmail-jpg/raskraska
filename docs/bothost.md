@@ -25,7 +25,7 @@ python bot.py
 В корне есть:
 
 - `bot.py` - entrypoint для Telegram-бота.
-- `requirements.txt` - подтягивает зависимости из `apps/api/requirements.txt`.
+- `requirements.txt` - легкие зависимости только для Telegram-бота на BotHost.
 - `Procfile` - fallback-команда для платформ, которые его читают.
 
 ## Если BotHost позволяет выбрать рабочую папку
