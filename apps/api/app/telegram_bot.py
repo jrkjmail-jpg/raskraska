@@ -18,6 +18,9 @@ def main_menu() -> ReplyKeyboardMarkup:
 
 async def run_bot() -> None:
     settings = get_settings()
+    if not settings.telegram_bot_token:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN is required")
+
     bot = Bot(settings.telegram_bot_token)
     dp = Dispatcher()
 
@@ -30,3 +33,9 @@ async def run_bot() -> None:
         await message.answer("Пришлите JPEG, PNG или WEBP до 20 МБ.")
 
     await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(run_bot())
