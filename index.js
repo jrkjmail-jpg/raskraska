@@ -4,6 +4,8 @@ const TOKEN =
   process.env.TELEGRAM_BOT_TOKEN ||
   process.env.BOT_TOKEN ||
   process.env.TELEGRAM_TOKEN;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1-mini";
 
 if (!TOKEN) {
   console.error("Missing bot token. Add TELEGRAM_BOT_TOKEN in BotHost environment variables.");
@@ -42,12 +44,107 @@ async function callTelegram(method, payload = {}) {
   return data.result;
 }
 
+async function getTelegramFile(fileId) {
+  const file = await callTelegram("getFile", { file_id: fileId });
+  const response = await fetch(`https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`);
+  if (!response.ok) {
+    throw new Error(`Telegram file download failed: HTTP ${response.status}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return {
+    bytes: new Uint8Array(arrayBuffer),
+    name: file.file_path.split("/").pop() || "photo.jpg",
+  };
+}
+
+function promptForColoringPage() {
+  return [
+    "Create a clean black-and-white coloring book page from the uploaded image.",
+    "Requirements:",
+    "- white background",
+    "- thick black outlines",
+    "- no grayscale",
+    "- no shading",
+    "- no shadows",
+    "- no color",
+    "- printable coloring book style",
+    "- preserve likeness of the subject",
+    "- child-friendly design",
+    "- large coloring areas",
+    "- simplified details",
+    "Output must look like a professional coloring book page.",
+  ].join("\n");
+}
+
+async function createColoringPage(imageBytes, fileName) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is missing in BotHost environment variables.");
+  }
+
+  const formData = new FormData();
+  formData.append("model", OPENAI_IMAGE_MODEL);
+  formData.append("prompt", promptForColoringPage());
+  formData.append("size", "1024x1024");
+  formData.append("output_format", "png");
+  formData.append("image", new Blob([imageBytes], { type: "image/jpeg" }), fileName);
+
+  const response = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: formData,
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.data?.[0]?.b64_json) {
+    throw new Error(`OpenAI image edit failed: HTTP ${response.status} ${JSON.stringify(payload)}`);
+  }
+
+  return Buffer.from(payload.data[0].b64_json, "base64");
+}
+
 async function reply(chatId, text, replyMarkup) {
   return callTelegram("sendMessage", {
     chat_id: chatId,
     text,
     ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
   });
+}
+
+async function sendPhoto(chatId, pngBuffer, caption) {
+  const formData = new FormData();
+  formData.append("chat_id", String(chatId));
+  if (caption) {
+    formData.append("caption", caption);
+  }
+  formData.append("photo", new Blob([pngBuffer], { type: "image/png" }), "raskraska.png");
+
+  const response = await fetch(`${API}/sendPhoto`, {
+    method: "POST",
+    body: formData,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.ok) {
+    throw new Error(`sendPhoto failed: HTTP ${response.status} ${JSON.stringify(payload)}`);
+  }
+}
+
+async function generateFromMessage(message) {
+  const chatId = message.chat.id;
+  await reply(chatId, "Фото получено. Делаю раскраску, обычно это занимает 5-15 секунд.");
+
+  const photo = message.photo?.[message.photo.length - 1];
+  const document = message.document;
+  const fileId = photo?.file_id || document?.file_id;
+  if (!fileId) {
+    await reply(chatId, "Не нашел файл изображения. Пришлите фото или документ JPEG/PNG/WEBP.");
+    return;
+  }
+
+  const file = await getTelegramFile(fileId);
+  const png = await createColoringPage(file.bytes, file.name);
+  await sendPhoto(chatId, png, "Готово. Вот ваша раскраска.");
 }
 
 async function handleMessage(message) {
@@ -65,7 +162,7 @@ async function handleMessage(message) {
   } else if (text === "Поддержка") {
     await reply(chatId, "Напишите ваш вопрос одним сообщением.");
   } else if (message.photo || message.document) {
-    await reply(chatId, "Фото получено. Генерацию раскрасок подключим следующим шагом.");
+    await generateFromMessage(message);
   } else {
     await reply(chatId, "Нажмите «Создать раскраску» или отправьте /start.", menu());
   }
@@ -86,7 +183,15 @@ async function poll() {
       for (const update of updates) {
         offset = update.update_id + 1;
         if (update.message) {
-          await handleMessage(update.message);
+          try {
+            await handleMessage(update.message);
+          } catch (error) {
+            console.error(error.message || error);
+            await reply(
+              update.message.chat.id,
+              "Не получилось создать раскраску. Проверьте OPENAI_API_KEY в BotHost и попробуйте еще раз."
+            ).catch((replyError) => console.error(replyError.message || replyError));
+          }
         }
       }
     } catch (error) {
@@ -100,6 +205,7 @@ async function start() {
   const me = await callTelegram("getMe");
   await callTelegram("deleteWebhook", { drop_pending_updates: true });
   console.log(`Bot polling started for @${me.username}`);
+  console.log(`OpenAI image model: ${OPENAI_IMAGE_MODEL}`);
   await poll();
 }
 
