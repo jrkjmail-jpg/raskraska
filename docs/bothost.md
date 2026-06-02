@@ -19,11 +19,12 @@ main
 Используйте:
 
 ```bash
-python bot.py
+python main.py
 ```
 
 В корне есть:
 
+- `main.py` - основной entrypoint для BotHost.
 - `bot.py` - entrypoint для Telegram-бота.
 - `requirements.txt` - легкая зависимость только для Telegram-бота на BotHost.
 - `Procfile` - fallback-команда для платформ, которые его читают.
@@ -39,7 +40,7 @@ apps/api
 Start command:
 
 ```bash
-python -m app.telegram_bot
+python main.py
 ```
 
 ## Environment Variables
