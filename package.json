@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "python3 main.py",
-    "dev": "python3 main.py",
+    "start": "python3 -m pip install -r requirements.txt && python3 main.py",
+    "dev": "python3 -m pip install -r requirements.txt && python3 main.py",
     "build": "echo BotHost Python bot has no Node build step"
   }
 }
