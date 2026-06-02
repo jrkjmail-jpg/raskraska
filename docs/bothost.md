@@ -25,7 +25,7 @@ python bot.py
 В корне есть:
 
 - `bot.py` - entrypoint для Telegram-бота.
-- `requirements.txt` - легкие зависимости только для Telegram-бота на BotHost.
+- `requirements.txt` - легкая зависимость только для Telegram-бота на BotHost.
 - `Procfile` - fallback-команда для платформ, которые его читают.
 
 ## Если BotHost позволяет выбрать рабочую папку
@@ -49,6 +49,8 @@ python -m app.telegram_bot
 ```env
 TELEGRAM_BOT_TOKEN=token_from_botfather
 ```
+
+Если BotHost автоматически передает токен из поля `Bot Token` как `BOT_TOKEN`, бот тоже его подхватит.
 
 Для полной генерации также нужны:
 
