@@ -1,9 +1,12 @@
 {
-  "name": "raskraska-bothost-bot",
-  "version": "0.1.0",
+  "name": "raskraska-bot",
+  "version": "1.0.0",
   "private": true,
+  "description": "Telegram bot for BotHost",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js"
+    "dev": "node index.js",
+    "bot": "node index.js"
   }
 }

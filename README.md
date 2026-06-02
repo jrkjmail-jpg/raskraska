@@ -1,13 +1,19 @@
-# Raskraska BotHost
+# Raskraska BotHost Bot
 
-Минимальная ветка для запуска Telegram-бота на BotHost.
+Полностью пересобранный минимальный Telegram-бот для BotHost.
 
-Бот написан на чистом Node.js без npm-зависимостей, чтобы BotHost не пытался запускать Python или Next.js.
+Ветка не содержит Next.js, FastAPI, Python-зависимостей или сборки. Только Node.js и прямой Telegram Bot API.
 
 ## Start command
 
 ```bash
 node index.js
+```
+
+Если BotHost просит главный файл:
+
+```text
+index.js
 ```
 
 ## Environment variables
@@ -16,4 +22,4 @@ node index.js
 TELEGRAM_BOT_TOKEN=token_from_botfather
 ```
 
-Также поддерживается переменная `BOT_TOKEN`, если BotHost передает токен из поля Bot Token автоматически.
+Также поддерживаются `BOT_TOKEN` и `TELEGRAM_TOKEN`.

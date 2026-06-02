@@ -1,14 +1,22 @@
-const token = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
+"use strict";
 
-if (!token) {
-  console.error("TELEGRAM_BOT_TOKEN or BOT_TOKEN is required");
+const TOKEN =
+  process.env.TELEGRAM_BOT_TOKEN ||
+  process.env.BOT_TOKEN ||
+  process.env.TELEGRAM_TOKEN;
+
+if (!TOKEN) {
+  console.error("Missing bot token. Add TELEGRAM_BOT_TOKEN in BotHost environment variables.");
   process.exit(1);
 }
 
-const apiBase = `https://api.telegram.org/bot${token}`;
+const API = `https://api.telegram.org/bot${TOKEN}`;
 let offset = 0;
+let handled = 0;
 
-function mainKeyboard() {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function menu() {
   return {
     keyboard: [
       [{ text: "Создать раскраску" }],
@@ -19,22 +27,23 @@ function mainKeyboard() {
   };
 }
 
-async function telegram(method, body = {}) {
-  const response = await fetch(`${apiBase}/${method}`, {
+async function callTelegram(method, payload = {}) {
+  const response = await fetch(`${API}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 
-  const payload = await response.json();
-  if (!payload.ok) {
-    throw new Error(`${method} failed: ${JSON.stringify(payload)}`);
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.ok) {
+    const details = data ? JSON.stringify(data) : await response.text().catch(() => "");
+    throw new Error(`${method} failed: HTTP ${response.status} ${details}`);
   }
-  return payload.result;
+  return data.result;
 }
 
-async function sendMessage(chatId, text, replyMarkup) {
-  await telegram("sendMessage", {
+async function reply(chatId, text, replyMarkup) {
+  return callTelegram("sendMessage", {
     chat_id: chatId,
     text,
     ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
@@ -46,44 +55,31 @@ async function handleMessage(message) {
   const text = message.text || "";
 
   if (text === "/start") {
-    await sendMessage(chatId, "Загрузите фото, и я превращу его в раскраску.", mainKeyboard());
-    return;
+    await reply(chatId, "Загрузите фото, и я превращу его в раскраску.", menu());
+  } else if (text === "Создать раскраску") {
+    await reply(chatId, "Пришлите фото в формате JPEG, PNG или WEBP до 20 МБ.");
+  } else if (text === "Мои работы") {
+    await reply(chatId, "История работ появится после подключения базы данных.");
+  } else if (text === "Купить Premium") {
+    await reply(chatId, "Premium скоро будет доступен. Сейчас проверяем стабильный запуск бота.");
+  } else if (text === "Поддержка") {
+    await reply(chatId, "Напишите ваш вопрос одним сообщением.");
+  } else if (message.photo || message.document) {
+    await reply(chatId, "Фото получено. Генерацию раскрасок подключим следующим шагом.");
+  } else {
+    await reply(chatId, "Нажмите «Создать раскраску» или отправьте /start.", menu());
   }
 
-  if (text === "Создать раскраску") {
-    await sendMessage(chatId, "Пришлите JPEG, PNG или WEBP до 20 МБ.");
-    return;
-  }
-
-  if (text === "Мои работы") {
-    await sendMessage(chatId, "История работ появится после подключения базы данных.");
-    return;
-  }
-
-  if (text === "Купить Premium") {
-    await sendMessage(chatId, "Premium скоро будет доступен. Сейчас тестируем запуск бота.");
-    return;
-  }
-
-  if (text === "Поддержка") {
-    await sendMessage(chatId, "Напишите ваш вопрос одним сообщением, и мы вернемся с ответом.");
-    return;
-  }
-
-  if (message.photo || message.document) {
-    await sendMessage(chatId, "Фото получено. Генерацию раскрасок подключим следующим шагом.");
-    return;
-  }
-
-  await sendMessage(chatId, "Нажмите «Создать раскраску» или отправьте /start.", mainKeyboard());
+  handled += 1;
+  console.log(`Handled message #${handled} from chat ${chatId}`);
 }
 
 async function poll() {
   while (true) {
     try {
-      const updates = await telegram("getUpdates", {
+      const updates = await callTelegram("getUpdates", {
         offset,
-        timeout: 50,
+        timeout: 45,
         allowed_updates: ["message"],
       });
 
@@ -94,20 +90,30 @@ async function poll() {
         }
       }
     } catch (error) {
-      console.error(error);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      console.error(error.message || error);
+      await sleep(3000);
     }
   }
 }
 
 async function start() {
-  const me = await telegram("getMe");
-  await telegram("deleteWebhook", { drop_pending_updates: true });
+  const me = await callTelegram("getMe");
+  await callTelegram("deleteWebhook", { drop_pending_updates: true });
   console.log(`Bot polling started for @${me.username}`);
   await poll();
 }
 
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, stopping bot");
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("SIGINT received, stopping bot");
+  process.exit(0);
+});
+
 start().catch((error) => {
-  console.error(error);
+  console.error(error.message || error);
   process.exit(1);
 });
