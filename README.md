@@ -4,8 +4,16 @@
 
 ## Start command
 
+Python mode:
+
 ```bash
 python main.py
+```
+
+Node fallback mode:
+
+```bash
+node index.js
 ```
 
 ## Environment variables
