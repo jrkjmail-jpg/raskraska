@@ -47,7 +47,9 @@ async def run_bot() -> None:
     async def support(message: Message) -> None:
         await message.answer("Напишите ваш вопрос одним сообщением, и мы вернемся с ответом.")
 
-    logging.info("Bot polling started")
+    me = await bot.get_me()
+    await bot.delete_webhook(drop_pending_updates=True)
+    logging.info("Bot polling started for @%s", me.username)
     await dp.start_polling(bot)
 
 
