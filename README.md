@@ -25,8 +25,4 @@ OPENAI_API_KEY=sk-...
 
 Также поддерживаются `BOT_TOKEN` и `TELEGRAM_TOKEN`.
 
-Опционально можно переопределить модель:
-
-```env
-OPENAI_IMAGE_MODEL=gpt-image-1-mini
-```
+Модель генерации зафиксирована в коде как `gpt-image-1-mini`.

@@ -5,7 +5,7 @@ const TOKEN =
   process.env.BOT_TOKEN ||
   process.env.TELEGRAM_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1-mini";
+const OPENAI_IMAGE_MODEL = "gpt-image-1-mini";
 
 if (!TOKEN) {
   console.error("Missing bot token. Add TELEGRAM_BOT_TOKEN in BotHost environment variables.");
