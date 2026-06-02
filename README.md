@@ -2,15 +2,9 @@
 
 Минимальная ветка для запуска Telegram-бота на BotHost.
 
+Бот написан на чистом Node.js без npm-зависимостей, чтобы BotHost не пытался запускать Python или Next.js.
+
 ## Start command
-
-Python mode:
-
-```bash
-python main.py
-```
-
-Node fallback mode:
 
 ```bash
 node index.js
